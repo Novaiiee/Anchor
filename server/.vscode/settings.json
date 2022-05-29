@@ -1,3 +1,15 @@
 {
-	"prettier.endOfLine": "lf"
+	"prettier.endOfLine": "lf",
+	"sqltools.connections": [
+		{
+			"previewLimit": 50,
+			"server": "localhost",
+			"port": 5432,
+			"driver": "PostgreSQL",
+			"name": "Anchor",
+			"database": "anchor",
+			"username": "postgres",
+			"password": "pg_notTWILIGHT_341"
+		}
+	]
 }

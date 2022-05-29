@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
-import { Strategy } from "passport-google-oauth20";
-import { UserEntity } from "../../users/entities/user.entity";
+import { Profile, Strategy } from "passport-google-oauth20";
+import { AuthService } from "../auth.service";
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
-	constructor() {
+	constructor(private readonly authService: AuthService) {
 		super({
 			clientID: process.env.GOOGLE_CLIENT_ID,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -14,17 +14,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
 		});
 	}
 
-	async validate(accessToken: string, refreshToken: string, profile: any): Promise<any> {
-		const { name, emails, photos } = profile;
-
-		const user: Partial<UserEntity> = {
-			email: emails[0].value,
-			username: `${name.givenName} ${name.lastName}`,
-			// picture: photos[0].value,
-			provider: "google",
-			resetToken: refreshToken
-		};
-
-		return user;
+	async validate(_: string, refreshToken: string, profile: Profile): Promise<any> {
+		return this.authService.loginWithOAuth(profile, refreshToken);
 	}
 }
