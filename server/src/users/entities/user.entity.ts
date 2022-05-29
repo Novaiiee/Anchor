@@ -1,12 +1,10 @@
+import { Exclude } from "class-transformer";
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
-@Entity()
+@Entity({ name: "user" })
 export class UserEntity {
-	@PrimaryGeneratedColumn()
+	@PrimaryGeneratedColumn("uuid")
 	id: string;
-
-	@Column()
-	name: string;
 
 	@Column({ unique: true })
 	username: string;
@@ -15,9 +13,11 @@ export class UserEntity {
 	email: string;
 
 	@Column({ nullable: true })
+	@Exclude()
 	password?: string;
 
 	@Column({ nullable: true })
+	@Exclude()
 	resetToken?: string;
 
 	@Column()
