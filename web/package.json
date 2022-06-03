@@ -33,5 +33,12 @@
 		"tslib": "^2.3.1",
 		"typescript": "~4.6.2"
 	},
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"@felte/validator-yup": "^1.0.8",
+		"@types/yup": "^0.29.14",
+		"felte": "^1.2.2",
+		"svelte-forms": "^2.3.1",
+		"yup": "^0.32.11"
+	}
 }
