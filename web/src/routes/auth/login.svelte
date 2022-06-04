@@ -1,13 +1,12 @@
 <script>
-	import LoginForm from "../../lib/components/auth/LoginForm.svelte";
-	import Navbar from "../../lib/components/Navbar.svelte";
+	import LoginForm from "$lib/components/auth/LoginForm.svelte";
 </script>
 
-<main>
-	<Navbar />
-	<div class="flex w-screen h-full justify-center items-center">
-		<div class="flex justify-center items-center w-full h-full">
-			<LoginForm />
-		</div>
+<svelte:head>
+	<title>Login - Anchor</title>
+</svelte:head>
+<main class="flex h-full w-screen items-center justify-center">
+	<div class="flex h-full w-full items-center justify-center">
+		<LoginForm />
 	</div>
 </main>
