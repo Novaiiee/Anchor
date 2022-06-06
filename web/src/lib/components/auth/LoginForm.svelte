@@ -4,7 +4,7 @@
 	import * as yup from "yup";
 	import GithubButton from "./GithubButton.svelte";
 	import GoogleButton from "./GoogleButton.svelte";
-
+	
 	export let name: "Login" | "Register" = "Login";
 
 	const schema = yup.object({
@@ -28,7 +28,7 @@
 	});
 </script>
 
-<form use:form class="flex w-2/12 flex-col items-center space-y-6">
+<form use:form class="flex md:w-2/12 flex-col items-center space-y-6">
 	<h1 class="text-4xl font-bold">{name}</h1>
 	<GoogleButton />
 	<GithubButton />

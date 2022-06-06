@@ -1,6 +1,7 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
-import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
+import { Request, Response } from "express";
+import { UserEntity } from "../users/entities/user.entity";
 import { AuthService } from "./auth.service";
 import { RegisterDTO } from "./dto/RegisterDTO";
 import { LoginResult } from "./types";
@@ -11,8 +12,8 @@ export class AuthController {
 
 	@UseGuards(AuthGuard("local"))
 	@Post("/login")
-	async login(@Req() req): Promise<LoginResult> {
-		return this.authService.login(req.user);
+	async login(@Req() req: Request): Promise<LoginResult> {
+		return this.authService.login(req.user as UserEntity);
 	}
 
 	@Post("/register")
@@ -21,28 +22,48 @@ export class AuthController {
 	}
 
 	@UseGuards(AuthGuard("jwt"))
-	@Get("profile")
-	getProfile(@Req() req) {
+	@Get("/profile")
+	getProfile(@Req() req: Request) {
 		return req.user;
 	}
 
-	@Get("google")
+	@Get("/google")
 	@UseGuards(AuthGuard("google"))
 	async googleAuth() {}
 
-	@Get("google/callback")
+	@Get("/google/callback")
 	@UseGuards(AuthGuard("google"))
-	googleAuthCallback(@Req() req) {
-		return req.user;
+	googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+		const { token } = req.user as {
+			token: string;
+			user: UserEntity;
+		};
+
+		res.cookie("access_token", token, {
+			domain: process.env.CLIENT_DOMAIN,
+			path: "/"
+		});
+
+		res.redirect(process.env.CLIENT_AUTH_REDIRECT);
 	}
 
 	@Get("github")
 	@UseGuards(AuthGuard("github"))
 	async githubAuth() {}
 
-	@Get("github/callback")
+	@Get("/github/callback")
 	@UseGuards(AuthGuard("github"))
-	githubAuthCallback(@Req() req) {
-		return req.user;
+	githubAuthCallback(@Req() req: Request, @Res() res: Response) {
+		const { token } = req.user as {
+			token: string;
+			user: UserEntity;
+		};
+
+		res.cookie("access_token", token, {
+			domain: process.env.CLIENT_DOMAIN,
+			path: "/"
+		});
+
+		res.redirect(process.env.CLIENT_AUTH_REDIRECT);
 	}
 }

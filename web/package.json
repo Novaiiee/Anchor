@@ -39,5 +39,9 @@
 		"typescript": "~4.6.2",
 		"yup": "^0.32.11"
 	},
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"@types/cookie": "^0.5.1",
+		"cookie": "^0.5.0"
+	}
 }
