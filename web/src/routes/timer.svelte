@@ -1,14 +1,10 @@
 <script context="module" lang="ts">
-	import { fetchUser } from "$lib/helpers/fetchUser";
-	import { user } from "$lib/stores/userStore";
 	import type { Load } from "@sveltejs/kit";
 
-	export const load: Load = async ({ fetch, session, stuff, props, params }) => {
-		const data = await fetchUser(fetch, session);
-
-		if (data) {
+	export const load: Load = async ({ session }) => {
+		if (session.user) {
 			return {
-				props: { userData: data }
+				props: { session: session.user }
 			};
 		}
 
@@ -20,13 +16,11 @@
 </script>
 
 <script lang="ts">
-	export let userData: User;
-
-	$: user.set(userData);
+	export let session: User;
 </script>
 
 <svelte:head>
 	<title>Timer - Anchor</title>
 </svelte:head>
 
-<h1>{$user?.username}</h1>
+<h1>{session.username}</h1>

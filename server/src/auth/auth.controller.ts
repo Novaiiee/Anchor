@@ -29,7 +29,9 @@ export class AuthController {
 
 	@Get("/google")
 	@UseGuards(AuthGuard("google"))
-	async googleAuth() {}
+	async googleAuth() {
+		/* */
+	}
 
 	@Get("/google/callback")
 	@UseGuards(AuthGuard("google"))
@@ -39,17 +41,20 @@ export class AuthController {
 			user: UserEntity;
 		};
 
-		res.cookie("access_token", token, {
+		res.cookie("session", token, {
 			domain: process.env.CLIENT_DOMAIN,
-			path: "/"
+			path: "/",
+			sameSite: false
 		});
 
-		res.redirect(process.env.CLIENT_AUTH_REDIRECT);
+		res.redirect(process.env.CLIENT_AUTH_REDIRECT + `?token=${token}`);
 	}
 
 	@Get("github")
 	@UseGuards(AuthGuard("github"))
-	async githubAuth() {}
+	async githubAuth() {
+		/* */
+	}
 
 	@Get("/github/callback")
 	@UseGuards(AuthGuard("github"))
@@ -59,11 +64,12 @@ export class AuthController {
 			user: UserEntity;
 		};
 
-		res.cookie("access_token", token, {
+		res.cookie("session", token, {
 			domain: process.env.CLIENT_DOMAIN,
-			path: "/"
+			path: "/",
+			sameSite: false
 		});
 
-		res.redirect(process.env.CLIENT_AUTH_REDIRECT);
+		res.redirect(process.env.CLIENT_AUTH_REDIRECT + `?token=${token}`);
 	}
 }

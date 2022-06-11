@@ -5,10 +5,12 @@
 declare namespace App {
 	interface Locals {
 		token: string;
+		user: User;
 	}
 	// interface Platform {}
 	interface Session {
 		token: string;
+		user: User;
 	}
 	// interface Stuff {}
 }

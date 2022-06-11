@@ -1,29 +1,40 @@
 import type { GetSession, Handle } from "@sveltejs/kit";
-import { serialize } from "cookie";
+import { parse, serialize } from "cookie";
+import variables from "./lib/variables";
 
 export const handle: Handle = async ({ event, resolve }) => {
-	let token: string = "";
-
 	if (event.url.pathname.endsWith("auth/redirect")) {
-		token = event.url.searchParams.get("token")!;
-		console.log(token);
+		const token = event.url.searchParams.get("token") ?? "";
+		event.locals.token = token;
 
-		event.locals.token = token;
-	} else {
-		token = event.request.headers.get("cookie") ?? "";
-		event.locals.token = token;
+		const response = await resolve(event);
+
+		response.headers.set(
+			"Set-Cookie",
+			serialize("session", token, {
+				path: "/"
+			})
+		);
+
+		return response;
 	}
 
-	const response = await resolve(event);
+	const cookies = parse(event.request.headers.get("cookie") ?? "");
+	const { session } = cookies;
 
-	response.headers.set("Set-Cookie", serialize("access_token", token));
-	return response;
+	const user = await fetch(`${variables.serverUrl}/auth/profile`, {
+		headers: {
+			Authorization: `Bearer ${session}`
+		}
+	}).then((a) => a.json());
+
+	event.locals.user = user as User;
+	return await resolve(event);
 };
 
 export const getSession: GetSession = async ({ locals }) => {
-	const token = locals.token;
-
 	return {
-		token
+		token: locals.token,
+		user: locals.user
 	};
 };

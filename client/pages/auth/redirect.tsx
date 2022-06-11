@@ -13,7 +13,7 @@ export const getServerSideProps = async ({ req, res }: GetServerSidePropsContext
 	// 	path: "/"
 	// });
 
-	console.log("Access Token: ", getCookie("access_token", { req, res }));
+	console.log("Access Token: ", getCookie("session", { req, res }));
 	console.log("Cookie: ", getCookie("cookie", { req, res }));
 
 	setCookies("access_token", getCookie("cookie", { req, res }), { req, res });
