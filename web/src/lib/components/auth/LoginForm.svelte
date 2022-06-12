@@ -5,7 +5,7 @@
 	import variables from "../../variables";
 	import GithubButton from "./GithubButton.svelte";
 	import GoogleButton from "./GoogleButton.svelte";
-			
+				
 	export let name: "Login" | "Register" = "Login";
 
 	const schema = yup.object({

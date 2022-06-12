@@ -1,6 +1,6 @@
+import variables from "$lib/variables";
 import type { GetSession, Handle } from "@sveltejs/kit";
 import { parse, serialize } from "cookie";
-import variables from "./lib/variables";
 
 export const handle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.endsWith("auth/redirect")) {
@@ -34,7 +34,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event.locals.user = user;
 		}
 	} catch (e) {
-		console.log(e);
 		event.locals.user = null;
 	}
 

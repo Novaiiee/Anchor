@@ -1,5 +1,19 @@
-<script>
+<script context="module" lang="ts">
 	import LoginForm from "$lib/components/auth/LoginForm.svelte";
+	import type { Load } from "@sveltejs/kit";
+
+	export const load: Load = async ({ session }) => {
+		if (!session.user) {
+			return {
+				props: {}
+			};
+		}
+
+		return {
+			redirect: "/focus",
+			status: 302
+		};
+	};
 </script>
 
 <svelte:head>

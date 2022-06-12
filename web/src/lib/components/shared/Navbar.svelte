@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { user } from "$lib/stores/userStore";
 	import settingsIcon from "$lib/assets/icons/settings.svg";
+	import { userStore } from "$lib/stores/userStore";
 </script>
 
 <nav class="bg-blue-700 py-4">
@@ -8,14 +8,14 @@
 		<div>
 			<a class="text-2xl font-semibold text-white" href="/">Anchor</a>
 		</div>
-		{#if $user}
+		{#if $userStore}
 			<div class="flex items-center justify-center space-x-4 font-medium text-white">
 				<a href="/focus">Focus Mode</a>
 				<a href="/insights">Insights</a>
 			</div>
 		{/if}
 		<div class="space-x-4">
-			{#if $user}
+			{#if $userStore}
 				<img src={settingsIcon} alt="Settings Gear" />
 			{:else}
 				<a
