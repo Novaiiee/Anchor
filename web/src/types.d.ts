@@ -12,3 +12,8 @@ interface AuthFormResult {
 	user: User;
 	token: string;
 }
+
+interface AuthError {
+	type: "Email" | "Password" | "Username",
+	message: string;
+}

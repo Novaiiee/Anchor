@@ -1,12 +1,17 @@
 <script lang="ts">
+	import { goto } from "$app/navigation";
 	import { validator } from "@felte/validator-yup";
+	import axios from "axios";
 	import { createForm } from "felte";
 	import * as yup from "yup";
+	import processAuthErrors from "../../helpers/processAuthErrors";
 	import variables from "../../variables";
 	import GithubButton from "./GithubButton.svelte";
 	import GoogleButton from "./GoogleButton.svelte";
-				
+
 	export let name: "Login" | "Register" = "Login";
+
+	let authErrors: AuthError[] = [];
 
 	const schema = yup.object({
 		name:
@@ -26,20 +31,19 @@
 		onSubmit: async (values) => {
 			if (name === "Register") {
 				try {
-					const res = await fetch(`${variables.serverUrl}/auth/register`, {
-						method: "POST",
-						body: JSON.stringify({ ...values })
+					const res = await axios.post(`${variables.serverUrl}/auth/register`, {
+						body: values
 					});
-	
-					if (res.ok) {
-						const data = await res.json();
-						console.log(data);
-						return;
-					}
-	
-					console.log(res.status, res.statusText);	
+
+					const data = res.data as App.Session;
+					goto(`/auth/register?token${data.token}`);
 				} catch (e) {
-					console.log(e);
+					if (axios.isAxiosError(e)) {
+						if (e.response) {
+							console.log(e.response.data);
+							authErrors = processAuthErrors((e.response.data as { message: string[] }).message);
+						}
+					}
 				}
 			}
 		}
@@ -64,6 +68,11 @@
 					<p class="font-medium text-red-500">{error}</p>
 				{/each}
 			{/if}
+			{#each authErrors as error}
+				{#if error.type == "Username"}
+					<p class="font-medium text-red-500">{error.message}</p>
+				{/if}
+			{/each}
 		</div>
 	{/if}
 	<div class="flex w-full flex-col space-y-2">
@@ -85,6 +94,13 @@
 				<p class="font-medium text-red-500">{error}</p>
 			{/each}
 		{/if}
+		{#each authErrors as error}
+			{#if error.type === "Email" && name === "Register"}
+				<p class="font-medium text-red-500">{error.message}</p>
+			{:else if (error.type === "Email" || error.type === "Username") && name === "Login"}
+				<p class="font-medium text-red-500">{error}</p>
+			{/if}
+		{/each}
 	</div>
 	<div class="flex w-full flex-col space-y-2">
 		<label class="label" for="email">Password</label>
@@ -99,6 +115,11 @@
 				<p class="font-medium text-red-500">{error}</p>
 			{/each}
 		{/if}
+		{#each authErrors as error}
+			{#if error.type == "Password"}
+				<p class="font-medium text-red-500">{error.message}</p>
+			{/if}
+		{/each}
 	</div>
 	<button
 		type="submit"
