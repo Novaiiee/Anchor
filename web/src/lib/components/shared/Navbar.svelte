@@ -1,6 +1,6 @@
 <script lang="ts">
-	import settingsIcon from "$lib/assets/icons/settings.svg";
 	import { userStore } from "$lib/stores/userStore";
+	import NavbarDropdown from "./NavbarDropdown.svelte";
 </script>
 
 <nav class="bg-blue-700 py-4">
@@ -14,9 +14,9 @@
 				<a href="/insights">Insights</a>
 			</div>
 		{/if}
-		<div class="space-x-4">
+		<div class="flex items-center space-x-4">
 			{#if $userStore}
-				<img src={settingsIcon} alt="Settings Gear" />
+				<NavbarDropdown />
 			{:else}
 				<a
 					href="/auth/register"

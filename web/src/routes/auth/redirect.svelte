@@ -1,6 +1,6 @@
 <script context="module" lang="ts">
-	import { fetchUser } from "$lib/helpers/fetchUser";
 	import type { Load } from "@sveltejs/kit";
+	import { fetchUser } from "../../lib/helpers/fetchUser";
 
 	export const load: Load = async ({ fetch, session, stuff, props, params }) => {
 		const data = await fetchUser(fetch, session);
