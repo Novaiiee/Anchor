@@ -17,13 +17,17 @@ export const get: RequestHandler = async ({ url }) => {
 
 	if (user) {
 		return {
-			redirect: "/focus",
-			status: 301
+			status: 302,
+			headers: {
+				location: "/focus"
+			}
 		};
 	}
 
 	return {
-		redirect: "/auth/login?error=oauth",
-		status: 301
+		status: 302,
+		headers: {
+			location: "/auth/login?error=oauth"
+		}
 	};
 };
