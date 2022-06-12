@@ -2,9 +2,10 @@
 	import { validator } from "@felte/validator-yup";
 	import { createForm } from "felte";
 	import * as yup from "yup";
+	import variables from "../../variables";
 	import GithubButton from "./GithubButton.svelte";
 	import GoogleButton from "./GoogleButton.svelte";
-	
+			
 	export let name: "Login" | "Register" = "Login";
 
 	const schema = yup.object({
@@ -22,13 +23,30 @@
 	const { form, errors } = createForm<LoginFormSubmit>({
 		//@ts-expect-error
 		extend: validator({ schema }),
-		onSubmit: (values) => {
-			console.log(values);
+		onSubmit: async (values) => {
+			if (name === "Register") {
+				try {
+					const res = await fetch(`${variables.serverUrl}/auth/register`, {
+						method: "POST",
+						body: JSON.stringify({ ...values })
+					});
+	
+					if (res.ok) {
+						const data = await res.json();
+						console.log(data);
+						return;
+					}
+	
+					console.log(res.status, res.statusText);	
+				} catch (e) {
+					console.log(e);
+				}
+			}
 		}
 	});
 </script>
 
-<form use:form class="flex md:w-2/12 flex-col items-center space-y-6">
+<form use:form class="flex flex-col items-center space-y-6 md:w-2/12">
 	<h1 class="text-4xl font-bold">{name}</h1>
 	<GoogleButton />
 	<GithubButton />

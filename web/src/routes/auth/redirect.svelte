@@ -1,14 +1,13 @@
 <script context="module" lang="ts">
-	import { user } from "$lib/stores/userStore";
-	import type { Load } from "@sveltejs/kit";
 	import { fetchUser } from "$lib/helpers/fetchUser";
+	import type { Load } from "@sveltejs/kit";
 
 	export const load: Load = async ({ fetch, session, stuff, props, params }) => {
 		const data = await fetchUser(fetch, session);
 
 		if (data) {
 			return {
-				redirect: "/timer",
+				redirect: "/focus",
 				status: 301
 			};
 		}
@@ -18,7 +17,4 @@
 			status: 301
 		};
 	};
-</script>
-
-<script>
 </script>

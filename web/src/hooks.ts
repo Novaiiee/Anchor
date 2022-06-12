@@ -22,13 +22,22 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const cookies = parse(event.request.headers.get("cookie") ?? "");
 	const { session } = cookies;
 
-	const user = await fetch(`${variables.serverUrl}/auth/profile`, {
-		headers: {
-			Authorization: `Bearer ${session}`
-		}
-	}).then((a) => a.json());
+	try {
+		const res = await fetch(`${variables.serverUrl}/auth/profile`, {
+			headers: {
+				Authorization: `Bearer ${session}`
+			}
+		});
 
-	event.locals.user = user as User;
+		if (res.ok) {
+			const user = (await res.json()) as User;
+			event.locals.user = user;
+		}
+	} catch (e) {
+		console.log(e);
+		event.locals.user = null;
+	}
+
 	return await resolve(event);
 };
 

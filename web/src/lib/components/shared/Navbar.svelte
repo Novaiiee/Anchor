@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { user } from "$lib/stores/userStore";
+	import settingsIcon from "$lib/assets/icons/settings.svg";
 </script>
 
 <nav class="bg-blue-700 py-4">
@@ -15,7 +16,7 @@
 		{/if}
 		<div class="space-x-4">
 			{#if $user}
-				<img src={""} alt="" />
+				<img src={settingsIcon} alt="Settings Gear" />
 			{:else}
 				<a
 					href="/auth/register"
