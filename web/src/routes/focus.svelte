@@ -2,7 +2,7 @@
 	import { userStore } from "$lib/stores/userStore";
 	import type { Load } from "@sveltejs/kit";
 	import { onMount } from "svelte";
-	import { socketStore } from "../lib/stores/socketStore";
+	import { socket } from "../lib/stores/socketStore";
 
 	export const load: Load = async ({ session }) => {
 		if (session.user) {
@@ -21,14 +21,28 @@
 <script lang="ts">
 	export let session: User;
 
+	let currentTime = 0;
+	let timerStarted = false;
+	let startTime = 60;
+
 	onMount(() => {
 		userStore.set(session);
-		$socketStore.emit("events", { data: "" });
+		$socket.on("connect", () => {
+			$socket.emit("on-join", session.id);
 
-		$socketStore.on("events", (data) => {
-			console.log(data);
+			$socket.on("on-join-success", ({ room, socketId }) => {
+
+				$socket.on("on-timer", ({ time, userId, hasStartedTimer }) => {
+					timerStarted = hasStartedTimer;
+					currentTime = time;
+				});
+			});
 		});
 	});
+
+	const startTimer = () => {
+		if (!timerStarted) $socket.emit("start-timer", { userId: session.id, startTime });
+	};
 </script>
 
 <svelte:head>
@@ -36,3 +50,6 @@
 </svelte:head>
 
 <h1>{session.username}</h1>
+<p>{currentTime}</p>
+<button on:click={startTimer}>Start Timer</button>
+<input bind:value={startTime} type="number" />

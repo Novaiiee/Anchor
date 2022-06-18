@@ -1,5 +1,10 @@
 interface User {
+	id: string;
 	username: string;
+	email: string;
+	provider: "email" | "google" | "github";
+	createdAt: Date;
+	updatedAt: Date;
 }
 
 interface LoginFormSubmit {
