@@ -41,6 +41,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@okrad/svelte-progressbar": "^1.11.3",
 		"@rgossiaux/svelte-headlessui": "^1.0.2",
 		"@types/axios": "^0.14.0",
 		"@types/cookie": "^0.5.1",
