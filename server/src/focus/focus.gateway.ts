@@ -13,6 +13,7 @@ interface Session {
 	userId: string;
 	time: number;
 	hasTimerStarted: boolean;
+	isPaused: boolean;
 	interval: NodeJS.Timeout;
 }
 
@@ -47,8 +48,9 @@ export class FocusGateway {
 		return {
 			event: "join-room",
 			data: {
-				socketId: socket.id,
-				room: session.userId
+				isPaused: session.isPaused,
+				hasTimerStarted: session.hasTimerStarted,
+				time: session.time
 			}
 		};
 	}
@@ -61,10 +63,10 @@ export class FocusGateway {
 			session.interval = this.createInterval(userId, startTime);
 		}
 
-		socket.to(userId).emit("on-timer", {
+		this.server.to(userId).emit("on-timer", {
 			time: startTime,
 			userId,
-			hasStartedTimer: true
+			hasTimerStarted: true
 		});
 	}
 
@@ -78,30 +80,33 @@ export class FocusGateway {
 		session.hasTimerStarted = false;
 		session.time = 0;
 		session.interval = null;
+		session.isPaused = false;
 
-		return {
-			event: "on-timer",
-			data: {
-				time: 0
-			}
-		};
+		this.server.to(userId).emit("stop-timer");
 	}
 
 	@SubscribeMessage("pause-timer")
-	handlePauseTimer(@MessageBody() userId: string) {
+	handlePauseTimer(@MessageBody() userId: string): WsResponse<unknown> {
 		const session = this.sessions.find((x) => x.userId === userId);
 		if (!session) return;
 
 		clearInterval(session.interval);
+
 		session.interval = null;
+		session.isPaused = true;
+
+		this.server.to(userId).emit("pause-timer");
 	}
 
 	@SubscribeMessage("unpause-timer")
-	handleUnPauseTimer(@MessageBody() userId: string) {
+	handleUnPauseTimer(@MessageBody() userId: string): WsResponse<unknown> {
 		const session = this.sessions.find((x) => x.userId === userId);
 		if (!session) return;
 
 		session.interval = this.createInterval(session.userId, session.time);
+		session.isPaused = false;
+
+		this.server.to(userId).emit("unpause-timer");
 	}
 
 	createInterval(userId: string, startTime: number) {
@@ -111,6 +116,7 @@ export class FocusGateway {
 			if (!s.hasTimerStarted) {
 				s.time = startTime;
 				s.hasTimerStarted = true;
+				s.isPaused = false;
 			}
 
 			s.time--;
@@ -121,6 +127,8 @@ export class FocusGateway {
 				s.time === 0;
 				s.interval = null;
 				s.hasTimerStarted = false;
+				s.isPaused = false;
+
 				clearInterval(interval);
 			}
 
@@ -132,7 +140,8 @@ export class FocusGateway {
 			this.server.to(s.userId).emit("on-timer", {
 				time: s.time,
 				userId: s.userId,
-				hasStartedTimer: s.hasTimerStarted
+				hasTimerStarted: s.hasTimerStarted,
+				isPaused: s.isPaused
 			});
 
 			return () => {
@@ -151,7 +160,8 @@ export class FocusGateway {
 				time,
 				userId,
 				interval: null,
-				hasTimerStarted: false
+				hasTimerStarted: false,
+				isPaused: false
 			};
 
 			this.sessions.push(session);

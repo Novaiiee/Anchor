@@ -6,5 +6,5 @@
 </script>
 
 <div>
-	<h1>{seconds}</h1>
+	<h1 class="text-7xl font-inter font-medium">{seconds}</h1>
 </div>

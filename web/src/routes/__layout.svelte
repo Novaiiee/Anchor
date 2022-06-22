@@ -4,10 +4,8 @@
 	import "../app.css";
 </script>
 
-<main class="flex h-screen flex-col justify-between space-y-0 bg-white dark:bg-gray-800">
-	<div>
-		<Navbar />
-		<slot class="mb-auto" />
-	</div>
+<main class="flex h-screen w-screen flex-col justify-between space-y-0 bg-white dark:bg-gray-800">
+	<Navbar />
+	<slot class="mb-auto" />
 	<Footer />
 </main>
