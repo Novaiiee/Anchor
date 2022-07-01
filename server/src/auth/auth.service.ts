@@ -52,9 +52,9 @@ export class AuthService {
 	}
 
 	async register(data: RegisterDTO) {
-		const doesUserExist = await this.findByIdentifier(data.email, data.username);
+		const finder = await this.findByIdentifier(data.email, data.username);
 
-		if (doesUserExist.exists) {
+		if (finder.exists) {
 			throw new UnauthorizedException("User already exists");
 		}
 

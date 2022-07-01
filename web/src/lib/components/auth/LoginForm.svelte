@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from "$app/navigation";
 	import { validator } from "@felte/validator-yup";
 	import axios from "axios";
 	import { createForm } from "felte";
@@ -16,8 +15,8 @@
 	const schema = yup.object({
 		name:
 			name === "Register"
-				? yup.string().min(3, "Minimun 3 Characters").required("Required*")
-				: yup.string().min(3, "Minimun 3 Characters"),
+				? yup.string().min(4, "Minimun 3 Characters").required("Required*")
+				: yup.string().min(4, "Minimun 3 Characters"),
 		identifier:
 			name === "Register"
 				? yup.string().email("Not an email").required("Required*")
@@ -28,21 +27,28 @@
 	const { form, errors } = createForm<LoginFormSubmit>({
 		//@ts-expect-error
 		extend: validator({ schema }),
-		onSubmit: async (values) => {
-			if (name === "Register") {
-				try {
-					const res = await axios.post(`${variables.serverUrl}/auth/register`, {
-						body: values
-					});
-
-					const data = res.data as App.Session;
-					goto(`/auth/register?token${data.token}`);
-				} catch (e) {
-					if (axios.isAxiosError(e)) {
-						if (e.response) {
-							console.log(e.response.data);
-							authErrors = processAuthErrors((e.response.data as { message: string[] }).message);
+		onSubmit: async ({ password, name, identifier }) => {
+			try {
+				const res = await axios.post(
+					`${variables.serverUrl}/auth/${name === "Register" ? "register" : "login"}`,
+					{
+						body: {
+							email: identifier,
+							name,
+							password
 						}
+					}
+				);
+
+				const data = res.data as App.Session;
+				console.log(data);
+				
+				window.location.href = `/auth/redirect?token=${data.token}`;
+			} catch (e) {
+				if (axios.isAxiosError(e)) {
+					if (e.response) {
+						console.log(e.response.data);
+						authErrors = processAuthErrors((e.response.data as { message: string[] }).message);
 					}
 				}
 			}

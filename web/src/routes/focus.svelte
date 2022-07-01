@@ -23,10 +23,14 @@
 <script lang="ts">
 	export let session: User;
 
-	let currentTime = 0;
 	let hasTimerStarted = false;
-	let startTime = 60;
+	let cycleDuration = 20;
+	let currentCycle = 1;
+	let currentTime = cycleDuration;
+	let cycles = 4;
+	let breakDuration = 10;
 	let isPaused = false;
+	let isOnBreak = false;
 
 	$: initButtonText = hasTimerStarted ? "Stop" : "Start";
 	$: pauseButtonText = isPaused ? "Un Pause" : "Pause";
@@ -34,39 +38,67 @@
 	$: pauseButtonStyles = isPaused ? "bg-red-500" : "bg-blue-700";
 	$: initButtonStyles = hasTimerStarted ? "bg-red-500" : "bg-blue-700";
 
+	const setFocusData = (cb: Function = () => {}) => {
+		cb()
+		
+		return ({
+			currentTime: _currentTime,
+			hasTimerStarted: _hasTimerStarted,
+			isPaused: _isPaused,
+			isOnBreak: _isOnBreak,
+			cycles: _cycles,
+			cycleDuration: _cycleDuration,
+			breakDuration: _breakDuration,
+			currentCycle: _currentCycle 
+		}: any) => {
+			hasTimerStarted = _hasTimerStarted;
+			isPaused = _isPaused;
+			currentTime = _currentTime;
+			isOnBreak = _isOnBreak;
+			cycles = _cycles;
+			cycleDuration = _cycleDuration;
+			breakDuration = _breakDuration;
+			currentCycle = _currentCycle;
+		}
+	};
+
 	onMount(() => {
 		$socket.on("connect", () => {
-			$socket.emit("join-room", session.id);
+			$socket.emit("join-room", { userId: session.id, cycleDuration, cycles, breakDuration });
 
-			$socket.on("join-room", ({ isPaused: paused, time, hasTimerStarted: started }) => {
-				hasTimerStarted = started;
-				isPaused = paused;
-				currentTime = time;
+			$socket.on(
+				"join-room",
+				setFocusData(() => {
+					$socket.on(
+						"on-timer",
+						setFocusData(() => console.log("Started Timer"))
+					);
 
-				$socket.on("on-timer", ({ time, hasTimerStarted: started, isPaused: paused }) => {
-					hasTimerStarted = started;
-					isPaused = paused;
-					currentTime = time;
-				});
+					$socket.on("pause-timer", () => {
+						isPaused = true;
+					});
 
-				$socket.on("pause-timer", () => {
-					isPaused = true;
-				});
+					$socket.on("unpause-timer", () => {
+						isPaused = false;
+					});
 
-				$socket.on("unpause-timer", () => {
-					isPaused = false;
-				});
-
-				$socket.on("stop-timer", () => {
-					isPaused = false;
-					hasTimerStarted = false;
-					currentTime = 0;
-				});
-			});
+					$socket.on("stop-timer", () => {
+						isPaused = false;
+						hasTimerStarted = false;
+						currentTime = 0;
+					});
+				})
+			);
 		});
 	});
 
-	const startTimer = () => $socket.emit("start-timer", { userId: session.id, startTime });
+	const startTimer = () =>
+		$socket.emit("start-timer", {
+			userId: session.id,
+			cycleDuration,
+			cycles,
+			breakDuration
+		});
 	const stopTimer = () => $socket.emit("stop-timer", session.id);
 	const pauseTimer = () => $socket.emit("pause-timer", session.id);
 	const unPauseTimer = () => $socket.emit("unpause-timer", session.id);
@@ -88,6 +120,11 @@
 
 <main class="flex h-full w-screen flex-col items-center justify-center space-y-4">
 	<Clock {currentTime} />
+	<p>Current Cycle: {currentCycle}</p>
+	<p>Cycles: {cycles}</p>
+	<p>Break Duration: {breakDuration}</p>
+	<p>Cycles Duration: {cycleDuration}</p>
+	<p>IsOnBreak: {isOnBreak}</p>
 	<div class="flex items-center space-x-1">
 		<button
 			on:click={changeStartState}
