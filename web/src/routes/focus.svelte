@@ -2,14 +2,17 @@
 	import { userStore } from "$lib/stores/userStore";
 	import type { Load } from "@sveltejs/kit";
 	import { onMount } from "svelte";
+	import { Jumper } from "svelte-loading-spinners";
+	import { fade } from "svelte/transition";
 	import Clock from "../lib/components/focus/Clock.svelte";
+	import { focusSession,loadingSession } from "../lib/stores/focusStore";
 	import { socket } from "../lib/stores/socketStore";
 
 	export const load: Load = async ({ session }) => {
 		if (session.user) {
 			userStore.set(session.user);
 			return {
-				props: { session: session.user }
+				props: { user: session.user }
 			};
 		}
 
@@ -21,97 +24,65 @@
 </script>
 
 <script lang="ts">
-	export let session: User;
+	import CreateSession from "../lib/components/focus/CreateSession.svelte";
+	import { convertMsToTime } from "../lib/helpers/time";
 
-	let hasTimerStarted = false;
-	let cycleDuration = 20;
-	let currentCycle = 1;
-	let currentTime = cycleDuration;
-	let cycles = 4;
-	let breakDuration = 10;
-	let isPaused = false;
-	let isOnBreak = false;
+	export let user: User;
 
-	$: initButtonText = hasTimerStarted ? "Stop" : "Start";
-	$: pauseButtonText = isPaused ? "Un Pause" : "Pause";
+	$: initButtonText = $focusSession.hasTimerStarted ? "Stop" : "Start";
+	$: pauseButtonText = $focusSession.isPaused ? "Un Pause" : "Pause";
 
-	$: pauseButtonStyles = isPaused ? "bg-red-500" : "bg-blue-700";
-	$: initButtonStyles = hasTimerStarted ? "bg-red-500" : "bg-blue-700";
+	$: pauseButtonStyles = $focusSession.isPaused ? "bg-red-500" : "bg-blue-700";
+	$: initButtonStyles = $focusSession.hasTimerStarted ? "bg-red-500" : "bg-blue-700";
 
-	const setFocusData = (cb: Function = () => {}) => {
-		cb()
-		
-		return ({
-			currentTime: _currentTime,
-			hasTimerStarted: _hasTimerStarted,
-			isPaused: _isPaused,
-			isOnBreak: _isOnBreak,
-			cycles: _cycles,
-			cycleDuration: _cycleDuration,
-			breakDuration: _breakDuration,
-			currentCycle: _currentCycle 
-		}: any) => {
-			hasTimerStarted = _hasTimerStarted;
-			isPaused = _isPaused;
-			currentTime = _currentTime;
-			isOnBreak = _isOnBreak;
-			cycles = _cycles;
-			cycleDuration = _cycleDuration;
-			breakDuration = _breakDuration;
-			currentCycle = _currentCycle;
-		}
+	const setFocusData = (cb: (s: Session) => void = (s: Session) => {}) => {
+		return (_session: Session) => {
+			cb(_session);
+			if (!_session.hasTimerStarted) return;
+
+			$focusSession = { ..._session };
+		};
 	};
 
 	onMount(() => {
 		$socket.on("connect", () => {
-			$socket.emit("join-room", { userId: session.id, cycleDuration, cycles, breakDuration });
-
+			console.log("Connected to Socket");
+			
+			$socket.emit("join-room", user.id);
 			$socket.on(
 				"join-room",
 				setFocusData(() => {
+					$loadingSession = false;
+
+					$socket.on("on-timer", setFocusData());
+					$socket.on("pause-timer", () => ($focusSession.isPaused = true));
+					$socket.on("unpause-timer", () => ($focusSession.isPaused = false));
+
 					$socket.on(
-						"on-timer",
-						setFocusData(() => console.log("Started Timer"))
+						"stop-timer",
+						focusSession.reset(() => {
+							console.log("Resetted the Timer");
+						})
 					);
-
-					$socket.on("pause-timer", () => {
-						isPaused = true;
-					});
-
-					$socket.on("unpause-timer", () => {
-						isPaused = false;
-					});
-
-					$socket.on("stop-timer", () => {
-						isPaused = false;
-						hasTimerStarted = false;
-						currentTime = 0;
-					});
 				})
 			);
 		});
 	});
 
-	const startTimer = () =>
-		$socket.emit("start-timer", {
-			userId: session.id,
-			cycleDuration,
-			cycles,
-			breakDuration
-		});
-	const stopTimer = () => $socket.emit("stop-timer", session.id);
-	const pauseTimer = () => $socket.emit("pause-timer", session.id);
-	const unPauseTimer = () => $socket.emit("unpause-timer", session.id);
-
-	const changeStartState = () => {
-		if (hasTimerStarted) stopTimer();
-		else startTimer();
+	const startTimer = (e?: CustomEvent<CreateSessionValues>) => {
+		return () => {
+			if (e) {
+				$socket.emit("start-timer", {
+					...e.detail,
+					userId: user.id
+				});
+			}
+		};
 	};
 
-	const changePauseState = () => {
-		if (hasTimerStarted && isPaused) unPauseTimer();
-		else if (hasTimerStarted && !isPaused) pauseTimer();
-	};
+	const stopTimer = () => $socket.emit("stop-timer", user.id);
+	const pauseTimer = () => $socket.emit("pause-timer", user.id);
+	const unPauseTimer = () => $socket.emit("unpause-timer", user.id);
 </script>
 
 <svelte:head>
@@ -119,23 +90,51 @@
 </svelte:head>
 
 <main class="flex h-full w-screen flex-col items-center justify-center space-y-4">
-	<Clock {currentTime} />
-	<p>Current Cycle: {currentCycle}</p>
-	<p>Cycles: {cycles}</p>
-	<p>Break Duration: {breakDuration}</p>
-	<p>Cycles Duration: {cycleDuration}</p>
-	<p>IsOnBreak: {isOnBreak}</p>
-	<div class="flex items-center space-x-1">
-		<button
-			on:click={changeStartState}
-			class="rounded-md border-1 {initButtonStyles} py-2 px-8 font-medium text-white outline-none"
-			>{initButtonText}</button
+	{#if $loadingSession}
+		<div
+			transition:fade={{ duration: 500 }}
+			class="flex flex-col items-center justify-center space-y-10"
 		>
-		<button
-			disabled={!hasTimerStarted}
-			on:click={changePauseState}
-			class="rounded-md border-1 {pauseButtonStyles} py-2 px-8 font-medium text-white outline-none"
-			>{pauseButtonText}</button
+			<Jumper size={100} color="#004ED8" />
+			<h1 class="text-4xl font-semibold">Loading your Session...</h1>
+		</div>
+	{/if}
+	{#if !$focusSession.hasTimerStarted && !$loadingSession}
+		<div transition:fade={{ delay: 600 }} class="space-y-8">
+			<h1 class="text-4xl font-semibold">Start a Pomodoro Session</h1>
+			<CreateSession
+				on:timerStartRequest={(e) => focusSession.changeStartState(startTimer(e), stopTimer)}
+			/>
+		</div>
+	{:else if $focusSession.hasTimerStarted && !$loadingSession}
+		<div
+			transition:fade={{ delay: 800 }}
+			class="flex flex-col items-center justify-center space-y-10"
 		>
-	</div>
+			<div>
+				{#if $focusSession.isOnBreak}
+					<p class="pb-10 text-center text-4xl font-semibold">Break Time!</p>
+				{/if}
+				<p class="text-xl text-gray-600">
+					Cycle <span class="font-semibold">{$focusSession.currentCycle} </span> of
+					<span class="font-semibold"> {$focusSession.cycles}</span>
+					| Cycles are {convertMsToTime($focusSession.cycleDuration)}
+				</p>
+			</div>
+			<Clock />
+			<div class="flex items-center space-x-1">
+				<button
+					on:click={() => focusSession.changeStartState(startTimer(), stopTimer)}
+					class="rounded-md border-1 {initButtonStyles} py-2 px-8 font-medium text-white outline-none"
+					>{initButtonText}</button
+				>
+				<button
+					disabled={!$focusSession.hasTimerStarted}
+					on:click={() => focusSession.changePauseState(pauseTimer, unPauseTimer)}
+					class="rounded-md border-1 {pauseButtonStyles} py-2 px-8 font-medium text-white outline-none"
+					>{pauseButtonText}</button
+				>
+			</div>
+		</div>
+	{/if}
 </main>

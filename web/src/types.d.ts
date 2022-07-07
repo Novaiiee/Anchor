@@ -19,6 +19,26 @@ interface AuthFormResult {
 }
 
 interface AuthError {
-	type: "Email" | "Password" | "Username",
+	type: "Email" | "Password" | "Username";
 	message: string;
+}
+
+interface Session {
+	currentTime: number;
+	cycles: number;
+	cycleDuration: number;
+	currentCycle: number;
+	breakDuration: number;
+	hasTimerStarted: boolean;
+	isOnBreak: boolean;
+	isPaused: boolean;
+	socketUserIds?: Set<string>;
+}
+
+interface CreateSessionValues {
+	cycles: number;
+	cycleMinutes: number;
+	cycleHours: number;
+	breakMinutes: number;
+	breakHours: number;
 }

@@ -1,10 +1,18 @@
-<script>
-	export let startTime = 0;
-	export let currentTime = startTime;
+<script lang="ts">
+	import { convertMsToTime } from "../../helpers/time";
+	import { focusSession } from "../../stores/focusStore";
 
-	$: seconds = new Date(currentTime * 1000).toISOString().slice(11, 19);
+	$: time = "";
+	$: currentTime = 0;
+
+	$: {
+		if (currentTime != $focusSession.currentTime) {
+			time = convertMsToTime($focusSession.currentTime);
+			console.log("Updated Time");
+		}
+	}
 </script>
 
 <div>
-	<h1 class="text-7xl font-inter font-medium">{seconds}</h1>
+	<h1 class="font-inter text-7xl font-medium">{time}</h1>
 </div>

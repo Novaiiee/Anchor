@@ -12,7 +12,7 @@
 
 	let authErrors: AuthError[] = [];
 
-	const schema = yup.object({
+	const schema: yup.SchemaOf<LoginFormSubmit> = yup.object({
 		name:
 			name === "Register"
 				? yup.string().min(4, "Minimun 3 Characters").required("Required*")

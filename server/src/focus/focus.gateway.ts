@@ -7,27 +7,7 @@ import {
 	WsResponse
 } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
-
-interface Session {
-	userId: string;
-	currentTime: number;
-	cycles: number;
-	cycleDuration: number;
-	currentCycle: number;
-	breakDuration: number;
-	socketUserIds: string[];
-	hasTimerStarted: boolean;
-	isOnBreak: boolean;
-	isPaused: boolean;
-	interval: NodeJS.Timeout;
-}
-
-interface StartTimerBody {
-	userId: string;
-	cycles: number;
-	breakDuration: number;
-	cycleDuration: number;
-}
+import { Session, StartTimerBody } from "./types";
 
 @WebSocketGateway({
 	cors: {
@@ -35,46 +15,22 @@ interface StartTimerBody {
 	}
 })
 export class FocusGateway {
-	private sessions: Session[] = [];
-
 	@WebSocketServer()
 	server: Server;
 
+	private sessions: Session[] = [];
+
 	@SubscribeMessage("join-room")
-	handleOnJoin(
-		@MessageBody() { userId, breakDuration, cycleDuration, cycles }: StartTimerBody,
-		@ConnectedSocket() socket: Socket
-	) {
-		const session = this.findOrCreateSession(userId, socket.id, cycles, cycleDuration, breakDuration);
+	handleOnJoin(@MessageBody() userId: string, @ConnectedSocket() socket: Socket) {
+		const session = this.findOrCreateSession(userId, socket.id);
 
 		socket.join(session.userId);
-		session.socketUserIds.push(socket.id);
-
-		this.sessions = this.sessions.map((x) => {
-			if (x.userId === session.userId) return session;
-			return x;
-		});
-
-		this.server.to(userId).emit("join-room", session);
+		this.server.to(userId).emit("join-room", this.parseSessionForSocket(session));
 	}
 
 	@SubscribeMessage("start-timer")
-	handleStartTimer(
-		@MessageBody() { userId, breakDuration, cycleDuration, cycles }: StartTimerBody,
-		@ConnectedSocket() socket: Socket
-	) {
-		const session = this.findOrCreateSession(userId, socket.id, cycles, cycleDuration, breakDuration);
-
-		if (session.interval === null) {
-			session.interval = this.createInterval(userId, session.cycleDuration);
-		}
-
-		this.sessions = this.sessions.map((x) => {
-			if (x.userId === session.userId) return session;
-			return x;
-		});
-
-		this.server.to(userId).emit("on-timer", session);
+	handleStartTimer(@MessageBody() data: StartTimerBody, @ConnectedSocket() socket: Socket) {
+		this.startSessionTimer(data, socket.id);
 	}
 
 	@SubscribeMessage("stop-timer")
@@ -92,6 +48,7 @@ export class FocusGateway {
 		session.breakDuration = 0;
 		session.currentCycle = 1;
 		session.cycles = 0;
+		session.isOnBreak = false;
 
 		this.server.to(userId).emit("stop-timer");
 	}
@@ -114,83 +71,146 @@ export class FocusGateway {
 		const session = this.sessions.find((x) => x.userId === userId);
 		if (!session) return;
 
-		session.interval = this.createInterval(session.userId, session.currentTime);
+		session.interval = this.createInterval(session.userId);
 		session.isPaused = false;
 
 		this.server.to(userId).emit("unpause-timer");
 	}
 
-	createInterval(userId: string, startTime: number) {
+	createInterval(userId: string) {
+		const session = this.sessions.find((x) => x.userId === userId);
+
+		if (!session) {
+			console.log("Not found", userId);
+			return null;
+		}
+
+		if (session.interval) {
+			console.log("Session interval exists already", session.userId);
+			return session.interval;
+		}
+
 		return setInterval(async () => {
 			const s = this.sessions.find((x) => x.userId === userId);
-
+			console.log(session.userId, session.interval === null);
 			if (!s.hasTimerStarted) {
-				s.currentTime = startTime;
+				s.currentTime = s.isOnBreak ? s.breakDuration : s.cycleDuration;
 				s.hasTimerStarted = true;
 				s.isPaused = false;
 			}
 
-			s.currentTime--;
+			s.currentTime -= 1000;
+			// console.log(s.userId, s.socketUserIds);
 
-			if (s.currentTime <= 0) {
-				const interval = s.interval;
+			//Timer ended but not completed
+			if (s.currentTime < 0) {
+				if (s.currentCycle >= s.cycles) {
+					console.log("Stopping the timer completely");
+					return this.handleStopTimer(userId);
+				}
 
-				s.currentTime === 0;
-				s.interval = null;
-				s.hasTimerStarted = false;
-				s.isPaused = false;
-
-				clearInterval(interval);
-
-				if (s.isOnBreak && s.currentCycle < s.cycles) {
-					s.currentTime = s.breakDuration;
-					s.interval = this.createInterval(userId, s.breakDuration);
-					s.isOnBreak = false;
-				} else if (!s.isOnBreak && s.currentCycle < s.cycles) {
+				if (s.isOnBreak) {
 					s.currentTime = s.cycleDuration;
 					s.currentCycle++;
-					s.interval = this.createInterval(userId, s.cycleDuration);
-					s.isOnBreak = true;
+					s.isOnBreak = false;
 				} else {
-					this.handleStopTimer(userId);
+					s.currentTime = s.breakDuration;
+					s.isOnBreak = true;
 				}
 			}
 
-			this.sessions = this.sessions.map((x) => {
-				if (x.userId === s.userId) return s;
-				return x;
-			});
-
-			this.server.to(s.userId).emit("on-timer", s);
+			this.updateSessions(s);
+			this.server.to(s.userId).emit("on-timer", this.parseSessionForSocket(s));
 
 			return () => {
-				clearInterval(sessionStorage.interval);
-				s.hasTimerStarted = false;
+				clearInterval(s.interval);
+				this.handleStopTimer(s.userId);
 			};
 		}, 1000);
 	}
 
-	findOrCreateSession(userId: string, socketId: string, cycles = 4, cycleDuration = 1200, breakDuration = 300) {
+	// cycles = 4, cycleDuration = 1200, breakDuration = 300
+	findOrCreateSession(userId: string, socketId: string) {
 		let session = this.sessions.find((x) => x.userId === userId);
 
 		if (!session) {
 			session = {
-				currentTime: cycleDuration,
+				currentTime: 0,
 				userId,
-				cycleDuration,
-				cycles,
-				currentCycle: 1,
-				breakDuration,
+				cycleDuration: 0,
+				cycles: 0,
+				currentCycle: 0,
+				breakDuration: 0,
 				socketUserIds: [socketId],
 				hasTimerStarted: false,
 				isOnBreak: false,
 				isPaused: false,
 				interval: null
 			};
+		} else {
+			session.socketUserIds = [...new Set([...session.socketUserIds, socketId])];
+		}
 
-			this.sessions.push(session);
+		this.updateSessions(session);
+		return session;
+	}
+
+	startSessionTimer(data: StartTimerBody, socketId: string) {
+		const { breakHours, breakMinutes, cycleHours, cycleMinutes, cycles, userId } = data;
+		const session = this.findOrCreateSession(userId, socketId);
+
+		const cycleDuration = 1000 * (cycleHours * 60 * 60 + cycleMinutes * 60);
+		const breakDuration = 1000 * (breakHours * 60 * 60 + breakMinutes * 60);
+
+		if (session.interval === null) {
+			const updatedSession: Session = {
+				...session,
+				cycles,
+				cycleDuration,
+				breakDuration,
+				currentCycle: 1
+			};
+
+			this.updateSessions(updatedSession);
+
+			if (!updatedSession.hasTimerStarted) {
+				updatedSession.interval = this.createInterval(updatedSession.userId);
+				console.log("Timer has not started for", updatedSession.userId);
+			} else {
+				console.log("Timer has started for", updatedSession.userId);
+			}
+
+			return updatedSession;
 		}
 
 		return session;
+	}
+
+	updateSessions(session: Session) {
+		if (this.sessions.length === 0) {
+			this.sessions.push(session);
+			return;
+		}
+
+		const found = this.sessions.find((x) => x.userId === session.userId);
+
+		if (!found) {
+			this.sessions.push(session);
+			return;
+		}
+
+		this.sessions.forEach((x, i) => {
+			if (this.sessions[i].userId === session.userId) {
+				this.sessions[i] = session;
+				return;
+			}
+		});
+	}
+
+	parseSessionForSocket(session: Session) {
+		return {
+			...session,
+			interval: null
+		};
 	}
 }
