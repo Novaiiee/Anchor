@@ -14,7 +14,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, "github") {
 		});
 	}
 
-	async validate(accessToken: string, refreshToken: string, profile: Profile) {
-		return this.authService.loginWithOAuth(profile, refreshToken);
+	async validate(_, __, profile: Profile) {
+		return this.authService.loginWithOAuth(profile);
 	}
 }

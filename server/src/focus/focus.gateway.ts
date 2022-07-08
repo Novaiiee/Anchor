@@ -80,19 +80,12 @@ export class FocusGateway {
 	createInterval(userId: string) {
 		const session = this.sessions.find((x) => x.userId === userId);
 
-		if (!session) {
-			console.log("Not found", userId);
-			return null;
-		}
-
-		if (session.interval) {
-			console.log("Session interval exists already", session.userId);
-			return session.interval;
-		}
+		if (!session) return null;
+		if (session.interval) return session.interval;
 
 		return setInterval(async () => {
 			const s = this.sessions.find((x) => x.userId === userId);
-			console.log(session.userId, session.interval === null);
+
 			if (!s.hasTimerStarted) {
 				s.currentTime = s.isOnBreak ? s.breakDuration : s.cycleDuration;
 				s.hasTimerStarted = true;
@@ -100,7 +93,6 @@ export class FocusGateway {
 			}
 
 			s.currentTime -= 1000;
-			// console.log(s.userId, s.socketUserIds);
 
 			//Timer ended but not completed
 			if (s.currentTime < 0) {
@@ -175,9 +167,6 @@ export class FocusGateway {
 
 			if (!updatedSession.hasTimerStarted) {
 				updatedSession.interval = this.createInterval(updatedSession.userId);
-				console.log("Timer has not started for", updatedSession.userId);
-			} else {
-				console.log("Timer has started for", updatedSession.userId);
 			}
 
 			return updatedSession;
@@ -192,17 +181,14 @@ export class FocusGateway {
 			return;
 		}
 
-		const found = this.sessions.find((x) => x.userId === session.userId);
-
-		if (!found) {
+		if (!this.sessions.find((x) => x.userId === session.userId)) {
 			this.sessions.push(session);
 			return;
 		}
 
-		this.sessions.forEach((x, i) => {
+		this.sessions.forEach((_, i) => {
 			if (this.sessions[i].userId === session.userId) {
 				this.sessions[i] = session;
-				return;
 			}
 		});
 	}

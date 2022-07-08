@@ -35,7 +35,7 @@ export class AuthService {
 
 	async login(user: UserEntity): Promise<LoginResult> {
 		const token = this.generateToken(user.id, user.username);
-		const { createdAt, email, id, provider, updatedAt, username, resetToken } = user;
+		const { createdAt, email, id, provider, updatedAt, username } = user;
 
 		return {
 			token,
@@ -45,8 +45,7 @@ export class AuthService {
 				id,
 				provider,
 				updatedAt,
-				username,
-				resetToken
+				username
 			}
 		};
 	}
@@ -96,8 +95,8 @@ export class AuthService {
 		};
 	}
 
-	async loginWithOAuth(profile: GithubProfile | GoogleProfile, resetToken: string): Promise<LoginResult> {
-		const profileUser = this.extractUserFromProfile(profile, resetToken);
+	async loginWithOAuth(profile: GithubProfile | GoogleProfile): Promise<LoginResult> {
+		const profileUser = this.extractUserFromProfile(profile);
 		const { user, exists } = await this.findByIdentifier(profileUser.email, profileUser.username);
 
 		if (!exists) {
@@ -116,22 +115,20 @@ export class AuthService {
 		};
 	}
 
-	extractUserFromProfile(profile: GithubProfile | GoogleProfile, resetToken: string): Partial<UserEntity> {
+	extractUserFromProfile(profile: GithubProfile | GoogleProfile): Partial<UserEntity> {
 		if (!this.instanceOfGoogle(profile)) {
 			return {
 				email: profile.emails[0].value,
 				username: profile.username,
 				provider: "github",
-				password: null,
-				resetToken
+				password: null
 			};
 		} else if (this.instanceOfGoogle(profile)) {
 			return {
 				email: profile.emails[0].value,
 				username: `${profile.name.givenName} ${profile.name.familyName}`,
 				provider: "google",
-				password: null,
-				resetToken
+				password: null
 			};
 		}
 	}

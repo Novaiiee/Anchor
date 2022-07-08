@@ -16,10 +16,6 @@ export class UserEntity {
 	@Exclude()
 	password?: string;
 
-	@Column({ nullable: true })
-	@Exclude()
-	resetToken?: string;
-
 	@Column()
 	provider: "email" | "google" | "github";
 
