@@ -1,28 +1,45 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { AccountEntity } from "./entities/account.entity";
 import { UserEntity } from "./entities/user.entity";
 
 @Injectable()
 export class UsersService {
-	constructor(@InjectRepository(UserEntity) private readonly usersRepository: Repository<UserEntity>) {}
+	constructor(
+		@InjectRepository(UserEntity) private readonly usersRepository: Repository<UserEntity>,
+		@InjectRepository(AccountEntity) private readonly accountsRepository: Repository<AccountEntity>
+	) {}
 
 	async findOne(id: string) {
-		return this.usersRepository.findOne(id);
+		return this.usersRepository.findOne(id, {
+			relations: ["accounts"]
+		});
 	}
 
 	async findByIdentifier(identifier: string) {
-		let user = await this.usersRepository.findOne({ where: { email: identifier } });
+		const user = await this.usersRepository.findOne({ where: { email: identifier }, relations: ["accounts"] });
 		if (user) return user;
 
-		user = await this.usersRepository.findOne({ where: { username: identifier } });
-		return user;
+		return this.usersRepository.findOne({ where: { username: identifier }, relations: ["accounts"] });
 	}
 
-	async create(user: Omit<Partial<UserEntity>, "createdAt" | "updatedAt">) {
-		const newUser = this.usersRepository.create({ ...user });
-		this.usersRepository.save(newUser);
+	async create(data: Omit<Partial<UserEntity>, "createdAt" | "updatedAt">) {
+		const user = this.usersRepository.create({ ...data });
+		return this.usersRepository.save(user);
+	}
 
-		return newUser;
+	async createAccount(details: Omit<Partial<AccountEntity>, "createdAt" | "updatedAt">) {
+		const account = this.accountsRepository.create({ ...details });
+		await this.accountsRepository.save(account);
+
+		return account;
+	}
+
+	async addAccount(account: AccountEntity, userId: string) {
+		const user = await this.findOne(userId);
+		user.accounts = [...user.accounts, account];
+
+		return this.usersRepository.save(user);
 	}
 }

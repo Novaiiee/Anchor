@@ -2,7 +2,16 @@ interface User {
 	id: string;
 	username: string;
 	email: string;
-	provider: "email" | "google" | "github";
+	accounts: Account[];
+	createdAt: Date;
+	updatedAt: Date;
+}
+
+interface Account {
+	id: string;
+	email: string;
+	provider: Provider;
+	user: User;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -41,4 +50,15 @@ interface CreateSessionValues {
 	cycleHours: number;
 	breakMinutes: number;
 	breakHours: number;
+}
+
+type Provider = "github" | "google" | "local";
+
+interface ServerError {
+	body: {
+		messages: string[]
+	},
+	timestamp: string,
+	path: string,
+	statusCode: number
 }

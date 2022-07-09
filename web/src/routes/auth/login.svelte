@@ -21,6 +21,6 @@
 </svelte:head>
 <main class="flex h-full w-screen items-center justify-center">
 	<div class="flex h-full w-full items-center justify-center">
-		<LoginForm />
+		<LoginForm name="Login" />
 	</div>
 </main>

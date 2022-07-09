@@ -16,6 +16,7 @@
 		{/if}
 		<div class="flex items-center space-x-4">
 			{#if $userStore}
+				<p class="text-white">{$userStore.username}</p>
 				<NavbarDropdown />
 			{:else}
 				<a

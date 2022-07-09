@@ -1,7 +1,7 @@
-import { Exclude } from "class-transformer";
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { AccountEntity } from "./account.entity";
 
-@Entity({ name: "user" })
+@Entity()
 export class UserEntity {
 	@PrimaryGeneratedColumn("uuid")
 	id: string;
@@ -12,12 +12,8 @@ export class UserEntity {
 	@Column({ unique: true })
 	email: string;
 
-	@Column({ nullable: true })
-	@Exclude()
-	password?: string;
-
-	@Column()
-	provider: "email" | "google" | "github";
+	@OneToMany(() => AccountEntity, (acc) => acc.user)
+	accounts: AccountEntity[];
 
 	@CreateDateColumn()
 	createdAt: Date;

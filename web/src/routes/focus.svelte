@@ -96,7 +96,7 @@
 			class="flex flex-col items-center justify-center space-y-10"
 		>
 			<Jumper size={100} color="#004ED8" />
-			<h1 class="text-4xl font-semibold">Loading your Session...</h1>
+			<h1 class="text-4xl font-semibold">Loading your Session {user.username}...</h1>
 		</div>
 	{/if}
 	{#if !$focusSession.hasTimerStarted && !$loadingSession}

@@ -3,14 +3,14 @@
 	import axios from "axios";
 	import { createForm } from "felte";
 	import * as yup from "yup";
-	import processAuthErrors from "../../helpers/processAuthErrors";
 	import variables from "../../variables";
 	import GithubButton from "./GithubButton.svelte";
 	import GoogleButton from "./GoogleButton.svelte";
 
-	export let name: "Login" | "Register" = "Login";
+	export let name: "Login" | "Register";
 
 	let authErrors: AuthError[] = [];
+	let serverError: string | null = null;
 
 	const schema: yup.SchemaOf<LoginFormSubmit> = yup.object({
 		name:
@@ -27,28 +27,39 @@
 	const { form, errors } = createForm<LoginFormSubmit>({
 		//@ts-expect-error
 		extend: validator({ schema }),
-		onSubmit: async ({ password, name, identifier }) => {
+		onSubmit: async ({ password, name: _name, identifier }) => {
+			const bodies = new Map<string, any>([
+				[
+					"register",
+					{
+						username: _name,
+						password,
+						email: identifier
+					}
+				],
+				[
+					"login",
+					{
+						password,
+						identifier
+					}
+				]
+			]);
+
 			try {
 				const res = await axios.post(
-					`${variables.serverUrl}/auth/${name === "Register" ? "register" : "login"}`,
-					{
-						body: {
-							email: identifier,
-							name,
-							password
-						}
-					}
+					`${variables.serverUrl}/auth/${name.toLowerCase()}`,
+					bodies.get(name.toLowerCase())
 				);
 
 				const data = res.data as App.Session;
-				console.log(data);
-				
 				window.location.href = `/auth/redirect?token=${data.token}`;
 			} catch (e) {
 				if (axios.isAxiosError(e)) {
 					if (e.response) {
-						console.log(e.response.data);
-						authErrors = processAuthErrors((e.response.data as { message: string[] }).message);
+						const error = e.response.data as ServerError;
+						console.log(error);
+						serverError = error.body.messages[0];
 					}
 				}
 			}
@@ -132,6 +143,9 @@
 		class="w-full rounded-md border-1 bg-blue-700 py-2 px-8 font-medium text-white outline-none"
 		>Submit</button
 	>
+	{#if serverError !== null}
+		<p class="font-semibold rounded-lg bg-red-500 px-8 py-2 w-full text-white text-center">{serverError}</p>
+	{/if}
 	{#if name === "Register"}
 		<a href="/auth/login" class="text-blue-400">Already have an account? Login!</a>
 	{:else}

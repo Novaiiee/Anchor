@@ -6,7 +6,7 @@ import { Profile as GoogleProfile } from "passport-google-oauth20";
 import { UserEntity } from "../users/entities/user.entity";
 import { UsersService } from "../users/users.service";
 import { RegisterDTO } from "./dto/RegisterDTO";
-import { LoginResult } from "./types";
+import { LoginResult, ProfileExtraction } from "./types";
 
 @Injectable()
 export class AuthService {
@@ -16,11 +16,13 @@ export class AuthService {
 		const user = await this.usersService.findByIdentifier(identifier);
 		if (!user) throw new UnauthorizedException("User not found");
 
-		if (user.provider !== "email") {
-			throw new BadRequestException(`OAuth Provider is ${user.provider}, not email`);
+		const account = user.accounts.find((x) => x.provider === "local");
+
+		if (!account) {
+			throw new BadRequestException(`Sign in with a different provider`);
 		}
 
-		const isPasswordValid = await compare(password, user.password);
+		const isPasswordValid = await compare(password, account.password);
 
 		if (!isPasswordValid) {
 			throw new UnauthorizedException("Password is Invalid");
@@ -35,7 +37,7 @@ export class AuthService {
 
 	async login(user: UserEntity): Promise<LoginResult> {
 		const token = this.generateToken(user.id, user.username);
-		const { createdAt, email, id, provider, updatedAt, username } = user;
+		const { createdAt, email, id, updatedAt, username } = user;
 
 		return {
 			token,
@@ -43,7 +45,6 @@ export class AuthService {
 				createdAt,
 				email,
 				id,
-				provider,
 				updatedAt,
 				username
 			}
@@ -57,19 +58,29 @@ export class AuthService {
 			throw new UnauthorizedException("User already exists");
 		}
 
-		const newUser = await this.usersService.create({
+		const user = await this.usersService.create({
 			email: data.email,
 			username: data.username,
-			password: await hash(data.password, 12),
-			provider: "email"
+			accounts: [
+				await this.usersService.createAccount({
+					email: data.email,
+					password: await hash(data.password, 12),
+					provider: "local"
+				})
+			]
 		});
 
-		return this.login(newUser);
+		return this.login(user);
 	}
 
-	async registerWithOAuth(user: Partial<UserEntity>) {
-		const newUser = await this.usersService.create(user);
-		return this.login(newUser);
+	async registerWithOAuth(data: ProfileExtraction) {
+		const user = await this.usersService.create({
+			email: data.email,
+			username: data.username,
+			accounts: [await this.usersService.createAccount({ email: data.email, provider: data.provider })]
+		});
+
+		return this.login(user);
 	}
 
 	async findByIdentifier(email: string, username: string) {
@@ -97,38 +108,45 @@ export class AuthService {
 
 	async loginWithOAuth(profile: GithubProfile | GoogleProfile): Promise<LoginResult> {
 		const profileUser = this.extractUserFromProfile(profile);
-		const { user, exists } = await this.findByIdentifier(profileUser.email, profileUser.username);
+		const finder = await this.findByIdentifier(profileUser.email, profileUser.username);
 
-		if (!exists) {
+		if (!finder.exists) {
 			return this.registerWithOAuth(profileUser);
 		}
 
-		if (user.provider !== profileUser.provider) {
-			throw new UnauthorizedException("User created with different provider");
+		const account = finder.user.accounts.find((x) => x.provider === profileUser.provider);
+		const providerExists = ["github", "google", "local"].find((x) => x === profileUser.provider);
+
+		if (!account && providerExists) {
+			finder.user = await this.usersService.addAccount(
+				await this.usersService.createAccount({
+					email: profileUser.email,
+					provider: profileUser.provider
+				}),
+				finder.user.id
+			);
 		}
 
-		const token = this.generateToken(user.id, user.username);
+		const token = this.generateToken(finder.user.id, finder.user.username);
 
 		return {
-			user,
+			user: finder.user,
 			token
 		};
 	}
 
-	extractUserFromProfile(profile: GithubProfile | GoogleProfile): Partial<UserEntity> {
+	extractUserFromProfile(profile: GithubProfile | GoogleProfile): ProfileExtraction {
 		if (!this.instanceOfGoogle(profile)) {
 			return {
 				email: profile.emails[0].value,
 				username: profile.username,
-				provider: "github",
-				password: null
+				provider: "github"
 			};
 		} else if (this.instanceOfGoogle(profile)) {
 			return {
 				email: profile.emails[0].value,
 				username: `${profile.name.givenName} ${profile.name.familyName}`,
-				provider: "google",
-				password: null
+				provider: "google"
 			};
 		}
 	}
