@@ -6,6 +6,8 @@
 	$: currentTime = 0;
 
 	$: {
+		console.log("Trying to update time");
+
 		if (currentTime != $focusSession.currentTime) {
 			time = convertMsToTime($focusSession.currentTime);
 			console.log("Updated Time");
