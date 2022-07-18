@@ -1,11 +1,4 @@
-import {
-	ConnectedSocket,
-	MessageBody,
-	SubscribeMessage,
-	WebSocketGateway,
-	WebSocketServer,
-	WsResponse
-} from "@nestjs/websockets";
+import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
 import { Session, StartTimerBody } from "./types";
 
@@ -34,7 +27,7 @@ export class FocusGateway {
 	}
 
 	@SubscribeMessage("stop-timer")
-	handleStopTimer(@MessageBody() userId: string): WsResponse<unknown> {
+	handleStopTimer(@MessageBody() userId: string) {
 		const session = this.sessions.find((x) => x.userId === userId);
 		if (!session) return;
 
@@ -50,11 +43,12 @@ export class FocusGateway {
 		session.cycles = 0;
 		session.isOnBreak = false;
 
+		console.log("Stopped Timer");
 		this.server.to(userId).emit("stop-timer");
 	}
 
 	@SubscribeMessage("pause-timer")
-	handlePauseTimer(@MessageBody() userId: string): WsResponse<unknown> {
+	handlePauseTimer(@MessageBody() userId: string) {
 		const session = this.sessions.find((x) => x.userId === userId);
 		if (!session) return;
 
@@ -67,7 +61,7 @@ export class FocusGateway {
 	}
 
 	@SubscribeMessage("unpause-timer")
-	handleUnPauseTimer(@MessageBody() userId: string): WsResponse<unknown> {
+	handleUnPauseTimer(@MessageBody() userId: string) {
 		const session = this.sessions.find((x) => x.userId === userId);
 		if (!session) return;
 
@@ -112,6 +106,8 @@ export class FocusGateway {
 			}
 
 			this.updateSessions(s);
+			console.log(s);
+
 			this.server.to(s.userId).emit("on-timer", this.parseSessionForSocket(s));
 
 			return () => {

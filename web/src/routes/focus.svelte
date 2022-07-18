@@ -5,7 +5,9 @@
 	import { Jumper } from "svelte-loading-spinners";
 	import { fade } from "svelte/transition";
 	import Clock from "../lib/components/focus/Clock.svelte";
-	import { focusSession,loadingSession } from "../lib/stores/focusStore";
+	import CreateSession from "../lib/components/focus/CreateSession.svelte";
+	import { convertMsToTime } from "../lib/helpers/time";
+	import { focusSession, loadingSession } from "../lib/stores/focusStore";
 	import { socket } from "../lib/stores/socketStore";
 
 	export const load: Load = async ({ session }) => {
@@ -24,9 +26,6 @@
 </script>
 
 <script lang="ts">
-	import CreateSession from "../lib/components/focus/CreateSession.svelte";
-	import { convertMsToTime } from "../lib/helpers/time";
-
 	export let user: User;
 
 	$: initButtonText = $focusSession.hasTimerStarted ? "Stop" : "Start";
@@ -37,6 +36,8 @@
 
 	const setFocusData = (cb: (s: Session) => void = (s: Session) => {}) => {
 		return (_session: Session) => {
+			console.log(_session);
+
 			cb(_session);
 			if (!_session.hasTimerStarted) return;
 
@@ -47,11 +48,13 @@
 	onMount(() => {
 		$socket.on("connect", () => {
 			console.log("Connected to Socket");
-			
+
 			$socket.emit("join-room", user.id);
 			$socket.on(
 				"join-room",
 				setFocusData(() => {
+					console.log("Joined room");
+
 					$loadingSession = false;
 
 					$socket.on("on-timer", setFocusData());
