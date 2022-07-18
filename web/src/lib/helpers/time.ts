@@ -3,7 +3,7 @@ export function padTo2Digits(num: number) {
 }
 
 export function convertMsToTime(milliseconds: number) {
-	let seconds =milliseconds / 1000;
+	let seconds = milliseconds / 1000;
 	let minutes = Math.floor(seconds / 60);
 	let hours = Math.floor(minutes / 60);
 

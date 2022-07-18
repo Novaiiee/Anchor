@@ -41,7 +41,8 @@
 			cb(_session);
 			if (!_session.hasTimerStarted) return;
 
-			$focusSession = { ..._session };
+			focusSession.update(() => _session);
+			console.log("Focus: ", $focusSession);
 		};
 	};
 
