@@ -1,5 +1,6 @@
-import adapter from '@sveltejs/adapter-auto';
-import preprocess from 'svelte-preprocess';
+import defaultAdapter from "@sveltejs/adapter-auto";
+import netlifyAdapter from "@sveltejs/adapter-netlify";
+import preprocess from "svelte-preprocess";
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -8,7 +9,13 @@ const config = {
 	preprocess: preprocess({ postcss: true }),
 
 	kit: {
-		adapter: adapter()
+		adapter:
+			process.env.NODE_ENV === "development"
+				? defaultAdapter()
+				: netlifyAdapter({
+						edge: false,
+						split: false
+				  })
 	}
 };
 
